@@ -18,6 +18,7 @@ const UserSchema = mongoose.Schema(
     password: {
       type: String,
       required: true,
+      select: false,
     },
     phone: {
       type: String,
@@ -40,6 +41,9 @@ const UserSchema = mongoose.Schema(
     refreshToken: {
       type: String,
     },
+    lastLogin :{
+      type :Date
+    }
   },
   { timestamps: true },
 );
