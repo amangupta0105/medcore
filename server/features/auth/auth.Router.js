@@ -8,16 +8,14 @@ const {
   getRefreshToken,
 } = require("./auth.Controller");
 const { authMiddleware } = require("../../middleware/auth.middleware");
-const { selfAuthMiddleware } = require("../../middleware/selfauth.middleware");
 const authRouter = express.Router();
 
 //api routes
 authRouter.post("/register", userRegister);
 authRouter.post("/login", userLogin);
-authRouter.post("/logout",authMiddleware,selfAuthMiddleware,userLogout);
-authRouter.get(`/me/:id`,authMiddleware,selfAuthMiddleware,userInfo);
-authRouter.patch(`/change-password/:id`,authMiddleware,selfAuthMiddleware,userChangePassword);
-
-authRouter.post("/refreshToken",authMiddleware,selfAuthMiddleware,getRefreshToken);
+authRouter.post("/logout", authMiddleware, userLogout);
+authRouter.get(`/me`, authMiddleware, userInfo);
+authRouter.patch(`/change-password`, authMiddleware, userChangePassword);
+authRouter.post("/refreshToken", getRefreshToken);
 
 module.exports = { authRouter };
