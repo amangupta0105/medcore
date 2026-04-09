@@ -43,13 +43,15 @@
 
 ## 1. Auth
 
-| Method | Endpoint | Auth Required | Description |
-|--------|----------|---------------|-------------|
-| POST | `/auth/register` | No | Register a new user with name, email, password, and role. Returns JWT token and user profile. |
-| POST | `/auth/login` | No | Login with email and password. Returns JWT token and user profile with role for frontend redirect. |
-| POST | `/auth/logout` | Yes | Invalidate the current session token. Call this on logout button click. |
-| GET | `/auth/me` | Yes | Get the currently logged in user full profile. Call this on app load to restore session. |
-| PATCH | `/auth/change-password` | Yes | Update password by sending current password and new password. Returns success message. |
+| Method | Endpoint                | Auth Required | Description                                                                   |
+| ------ | ----------------------- | ------------- | ----------------------------------------------------------------------------- |
+| POST   | `/auth/register`        | No            | Register a new user. Returns access & refresh tokens with basic user info.    |
+| POST   | `/auth/login`           | No            | Login with email & password. Returns tokens and updates last login timestamp. |
+| POST   | `/auth/logout`          | Yes           | Logs out user by invalidating refresh token.                                  |
+| GET    | `/auth/me`              | Yes           | Get current logged-in user profile using access token.                        |
+| PATCH  | `/auth/change-password` | Yes           | Change password using current password. Invalidates existing sessions.        |
+| POST   | `/auth/refreshToken`    | No            | Generate new access & refresh tokens using a valid refresh token.             |
+
 
 ### Request Bodies
 
@@ -57,16 +59,17 @@
 ```json
 {
   "full_name": "Dr. Arjun Mehta",
-  "email": "arjun@medcore.in",
+  "email": "arjun1@medcore.in",
   "password": "securepassword123",
-  "role": "doctor"
+  "role": "doctor",
+  "phone": "9876543210"
 }
 ```
 
 **POST /auth/login**
 ```json
 {
-  "email": "arjun@medcore.in",
+  "email": "arjun1@medcore.in",
   "password": "securepassword123"
 }
 ```
@@ -74,11 +77,30 @@
 **PATCH /auth/change-password**
 ```json
 {
-  "current_password": "oldpassword",
-  "new_password": "newpassword123"
+  "current_password": "securepassword123",
+  "new_password": "newsecurepassword456"
 }
 ```
+**POST /auth/refreshToken**
+```json
+{
+  "refreshToken": "PASTE_REFRESH_TOKEN_HERE"
+}
+```
+**POST /auth/logout**
+```json
+{
 
+}
+only auth token
+```
+**GET /auth/me**
+```json
+{
+
+}
+only auth token
+```
 ---
 
 ## 2. Doctors
