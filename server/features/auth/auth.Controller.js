@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { User } = require("../../features/users/user.Schema.js");
+const { User } = require("../../features/users/user.model.js");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 var jwt = require("jsonwebtoken");
@@ -8,36 +8,95 @@ const {
   generateRefreshToken,
 } = require("../../utils/token.js");
 const JWT_REFRESH_KEY = process.env.REFRESH_KEY;
+const mongoose = require("mongoose");
+const { Doctor } = require("../doctors/doctors.model.js");
 
 const userRegister = async (req, res) => {
-  const { full_name, email, password, phone, role } = req.body;
+  const {
+    full_name,
+    email,
+    password,
+    phone,
+    role,
+    specialization,
+    licenseNumber,
+    experience,
+  } = req.body;
   if (!full_name || !email || !password || !role) {
     return res.status(400).json({
       status: false,
       message: "Please fill required fields",
     });
   }
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
-  try {
-    const newUser = await User.create({
-      full_name,
-      email,
-      password: hashedPassword,
-      phone,
-      role,
-    });
-    if (!newUser) {
-      return res.status(500).json({
+  if (role === "doctor") {
+    if (!specialization || !licenseNumber || !experience) {
+      return res.status(400).json({
         status: false,
-        message: "Error in creating new User",
+        message: "Please fill required fields",
       });
     }
+  }
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const userArray = await User.create(
+      [
+        {
+          full_name,
+          email,
+          password: hashedPassword,
+          phone,
+          role,
+        },
+      ],
+      { session },
+    );
+    console.log(userArray);
+
+    const newUser = userArray[0];
+    if (!newUser) throw new Error("User creation failed");
 
     const access_token = generateAccessToken(newUser);
     const refresh_token = generateRefreshToken(newUser);
 
     newUser.refreshToken = refresh_token;
-    await newUser.save();
+    await newUser.save({ session });
+
+    let newDoctor = null;
+
+    if (newUser.role === "doctor") {
+      const doctorArray = await Doctor.create(
+        [
+          {
+            userId: newUser._id,
+            specialization,
+            licenseNumber,
+            experience,
+          },
+        ],
+        { session },
+      );
+      newDoctor = doctorArray[0];
+      if (!newDoctor) throw new Error("Doctor creation failed");
+    }
+
+    await session.commitTransaction();
+    await session.endSession();
+
+    if (newDoctor) {
+      return res.status(201).json({
+        status: true,
+        message: "Doctor created successfully",
+        details: {
+          id: newDoctor.id,
+          role: newUser.role,
+          access_token: access_token,
+          refresh_token: refresh_token,
+        },
+      });
+    }
+
     return res.status(201).json({
       status: true,
       message: "User created successfully",
@@ -49,11 +108,11 @@ const userRegister = async (req, res) => {
       },
     });
   } catch (error) {
-    console.log(error.code);
+    await session.abortTransaction();
     if (error.code == 11000) {
       return res.status(409).json({
         status: false,
-        message: "Email already exists!",
+        message: "Email or license number already exists",
       });
     }
 
@@ -64,6 +123,8 @@ const userRegister = async (req, res) => {
         error: error.message,
       },
     });
+  } finally {
+    session.endSession();
   }
 };
 const userLogin = async (req, res) => {
@@ -97,7 +158,7 @@ const userLogin = async (req, res) => {
 
     return res.status(200).json({
       status: true,
-      message: "Succesfully logged in",
+      message: "Successfully logged in",
       details: {
         access_token,
         refresh_token,
